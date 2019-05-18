@@ -6,12 +6,29 @@ export (int) var x_start;
 export (int) var y_start;
 export (int) var offset;
 
+# Obtsacles
+export (PoolVector2Array) var empty_spaces
+export (PoolVector2Array) var ice_spaces
+
+# Obtsacle Signals
+signal damage_ice
+signal make_ice
+
 var all_pieces = [];
 
 var first_touch = Vector2(0,0)
 var final_touch = Vector2(0,0)
 var controlling = false
 var y_offset = 2
+
+# Swap back variables
+var piece_one = null
+var piece_two = null
+var last_place = Vector2(0,0)
+var last_direction = Vector2(0,0)
+var move_checked = false
+
+
 
 enum {wait, move}
 var state
@@ -30,7 +47,15 @@ func _ready():
 	randomize()
 	self.all_pieces = self.make_2d_array();
 	self.spawn_pieces()
+	self.spawn_ice()
 	self.state = move
+	
+func restricted_movement(place):
+	# Check empty pieces
+	for i in empty_spaces.size():
+		if(empty_spaces[i] == place):
+			return true
+	return false
 
 func _process(delta):
 	if(self.state == move):
@@ -44,6 +69,29 @@ func make_2d_array():
 		for j in height:
 			array[i].append(null); 
 	return array
+	
+func spawn_pieces():
+	for i in width:
+		for j in height:			
+			if(self.all_pieces[i][j] == null && !restricted_movement(Vector2(i,j))):
+				# Grab random piece
+				var rand = floor(rand_range(0,possible_pieces.size()));
+				var piece = possible_pieces[rand].instance();
+				var loops = 0
+				while(match_at(i,j,piece.color) && loops < 100):
+					rand = floor(rand_range(0,possible_pieces.size()));
+					loops += 1
+					piece = possible_pieces[rand].instance();
+				
+				add_child(piece);
+				piece.position = self.grid_to_pixel(i,j - self.y_offset);
+				piece.move(self.grid_to_pixel(i,j))
+				self.all_pieces[i][j] = piece;
+	self.after_refill()
+	
+func spawn_ice():
+	for i in ice_spaces.size():	
+		emit_signal("make_ice",ice_spaces[i])
 	
 func touch_input():
 	if(Input.is_action_just_pressed("ui_touch")):
@@ -60,12 +108,14 @@ func swap_pieces(column,row,direction):
 	var first_piece = all_pieces[column][row]
 	var other_piece = all_pieces[column + direction.x][row + direction.y]
 	if(first_piece!=null && other_piece!=null):
+		self.store_info(first_piece,other_piece,Vector2(column,row),direction)
 		self.state = wait
 		all_pieces[column][row] = other_piece
 		all_pieces[column + direction.x][row + direction.y] = first_piece
 		first_piece.move(grid_to_pixel(column + direction.x, row + direction.y))
 		other_piece.move(grid_to_pixel(column,row))
-		self.find_matches()
+		if(!self.move_checked):
+			self.find_matches()
 	
 func touch_difference(grid_1,grid_2):
 	var difference = grid_2 - grid_1
@@ -79,24 +129,25 @@ func touch_difference(grid_1,grid_2):
 			self.swap_pieces(grid_1.x,grid_1.y,Vector2(0,1))
 		elif(difference.y < 0):
 			self.swap_pieces(grid_1.x,grid_1.y,Vector2(0,-1))
-func spawn_pieces():
-	for i in width:
-		for j in height:
-			if(self.all_pieces[i][j] == null):
-				# Grab random piece
-				var rand = floor(rand_range(0,possible_pieces.size()));
-				var piece = possible_pieces[rand].instance();
-				var loops = 0
-				while(match_at(i,j,piece.color) && loops < 100):
-					rand = floor(rand_range(0,possible_pieces.size()));
-					loops += 1
-					piece = possible_pieces[rand].instance();
-				
-				add_child(piece);
-				piece.position = self.grid_to_pixel(i,j - self.y_offset);
-				piece.move(self.grid_to_pixel(i,j))
-				self.all_pieces[i][j] = piece;
-	self.after_refill()
+			
+
+	
+func store_info(first_piece, other_piece, place, direction):
+	piece_one = first_piece
+	piece_two = other_piece
+	last_place = place
+	last_direction = direction
+	
+	
+func swap_back():	
+	# Move previously swapped pieces back to previous place	
+	if(piece_one != null && piece_two != null):
+		self.swap_pieces(last_place.x,last_place.y,last_direction)
+	self.move_checked = false
+	self.state = move
+	
+	
+	
 		
 func match_at(i, j, color):
 	if(i>1):
@@ -154,17 +205,25 @@ func find_matches():
 							self.all_pieces[i][j-1].dim()
 							self.all_pieces[i][j].matched = true
 							self.all_pieces[i][j].dim()
-	if(match_found):
-		get_parent().get_node("destroy_timer").start()
+	
+	get_parent().get_node("destroy_timer").start()
+	
 
-func destroy_matched():
+func destroy_matched():					
+	var was_matched = false
 	for i in width:
 		for j in height:
 			if(all_pieces[i][j] != null):
 				if(all_pieces[i][j].matched):
+					emit_signal("damage_ice",Vector2(i,j))
+					was_matched = true
 					self.all_pieces[i][j].queue_free()
 					self.all_pieces[i][j] = null
-	get_parent().get_node("collapse_timer").start()
+	self.move_checked = true
+	if(was_matched):
+		get_parent().get_node("collapse_timer").start()
+	else:
+		self.swap_back()
 								
 func _on_destroy_timer_timeout():
 	self.destroy_matched()
@@ -172,7 +231,7 @@ func _on_destroy_timer_timeout():
 func collapse_columns():
 	for i in width:
 		for j in height:
-			if(self.all_pieces[i][j] == null):
+			if(self.all_pieces[i][j] == null && !restricted_movement(Vector2(i,j))):
 				for k in range(j + 1,height):
 					if(self.all_pieces[i][k] != null):
 						self.all_pieces[i][k].move(grid_to_pixel(i,j))	
@@ -190,10 +249,10 @@ func after_refill():
 					get_parent().get_node("destroy_timer").start()		
 					return
 	self.state = move
+	self.move_checked = false
 					
 func _on_collapse_timer_timeout():
 	collapse_columns()
-
 
 func _on_refill_timer_timeout():
 	self.spawn_pieces()
