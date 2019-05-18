@@ -8,15 +8,18 @@
 [node name="game_window" type="Node2D"]
 
 [node name="background 2" type="Sprite" parent="."]
+visible = false
 texture = ExtResource( 1 )
 centered = false
 
 [node name="Bottom UI v 2" type="Sprite" parent="."]
+visible = false
 position = Vector2( 0, 928 )
 texture = ExtResource( 2 )
 centered = false
 
 [node name="Top UI v 2" type="Sprite" parent="."]
+visible = false
 texture = ExtResource( 3 )
 centered = false
 
@@ -28,3 +31,18 @@ x_start = 64
 y_start = 800
 offset = 64
 
+[node name="destroy_timer" type="Timer" parent="."]
+wait_time = 0.25
+one_shot = true
+
+[node name="collapse_timer" type="Timer" parent="."]
+wait_time = 0.25
+one_shot = true
+
+[node name="refill_timer" type="Timer" parent="."]
+wait_time = 0.25
+one_shot = true
+
+[connection signal="timeout" from="destroy_timer" to="grid" method="_on_destroy_timer_timeout"]
+[connection signal="timeout" from="collapse_timer" to="grid" method="_on_collapse_timer_timeout"]
+[connection signal="timeout" from="refill_timer" to="grid" method="_on_refill_timer_timeout"]
