@@ -5,6 +5,10 @@ var width = 8
 var height = 10
 var ice = preload("res://Scenes/ice.tscn")
 
+# Goal Signals
+signal break_ice
+export (String) var value
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	pass
@@ -26,8 +30,10 @@ func _on_grid_make_ice(board_position):
 	ice_pieces[board_position.x][board_position.y] = current
 
 func _on_grid_damage_ice(board_position):
-	if(ice_pieces[board_position.x][board_position.y] != null):
-		ice_pieces[board_position.x][board_position.y].take_damage(1)
-		if(ice_pieces[board_position.x][board_position.y].health <= 0):
-			ice_pieces[board_position.x][board_position.y].queue_free()
-			ice_pieces[board_position.x][board_position.y] = null
+	if(ice_pieces.size() != 0):
+		if(ice_pieces[board_position.x][board_position.y] != null):
+			ice_pieces[board_position.x][board_position.y].take_damage(1)
+			if(ice_pieces[board_position.x][board_position.y].health <= 0):
+				ice_pieces[board_position.x][board_position.y].queue_free()
+				ice_pieces[board_position.x][board_position.y] = null
+				emit_signal("break_ice",self.value)
