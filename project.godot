@@ -15,7 +15,7 @@ _global_script_class_icons={
 
 [application]
 
-config/name="Match3"
+config/name="Space Blast"
 run/main_scene="res://Scenes/GameMenu.tscn"
 config/icon="res://icon.png"
 

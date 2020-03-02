@@ -73,17 +73,33 @@ var animated_effect = preload("res://Scenes/AnimatedExplosion.tscn")
 enum {wait, move}
 var state
 
+# Sounds
+var tap_sfx 
+var basic_sfx
+var better_sfx
+var best_sfx 
+
+
 var possible_pieces = [
 	preload("res://Scenes/yellow_piece.tscn"),
 	preload("res://Scenes/blue_piece.tscn"),
 	preload("res://Scenes/pink_piece.tscn"),
-	#preload("res://Scenes/orange_piece.tscn"),
-	#preload("res://Scenes/green_piece.tscn"),
-	#preload("res://Scenes/purple_piece.tscn")
+	preload("res://Scenes/orange_piece.tscn"),
+	preload("res://Scenes/green_piece.tscn"),
+	preload("res://Scenes/purple_piece.tscn")
 ];
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	# Load sounds
+	tap_sfx = load("res://Assets/Audio/MatchTap.ogg")	 
+	tap_sfx.set_loop(false)
+	basic_sfx = load("res://Assets/Audio/MatchBasic.ogg")	 
+	basic_sfx.set_loop(false)
+	better_sfx = load("res://Assets/Audio/MatchBetter.ogg")	 
+	better_sfx.set_loop(false)
+	best_sfx = load("res://Assets/Audio/MatchBest.ogg")	 
+	best_sfx.set_loop(false)
 	randomize()
 	self.all_pieces = self.make_2d_array();
 	if(sinkers_in_scene):
@@ -189,7 +205,7 @@ func touch_input():
 			first_touch = self.pixel_to_grid(get_global_mouse_position())
 			controlling = true
 	if(Input.is_action_just_released("ui_touch")):
-		if(controlling && self.is_in_grid(self.pixel_to_grid(get_global_mouse_position()))):
+		if(controlling): # && self.is_in_grid(self.pixel_to_grid(get_global_mouse_position()))):
 			controlling = false
 			final_touch = self.pixel_to_grid(get_global_mouse_position())
 			self.touch_difference(first_touch,final_touch)
@@ -197,6 +213,10 @@ func touch_input():
 func swap_pieces(column,row,direction):
 	var first_piece = all_pieces[column][row]
 	var other_piece = all_pieces[column + direction.x][row + direction.y]
+	if(first_piece==null):
+		return
+	if(other_piece==null):
+		return
 	var first_piece_wr = weakref(first_piece)
 	var other_piece_wr = weakref(other_piece)
 	if(!first_piece_wr.get_ref()):
@@ -291,6 +311,16 @@ func grid_to_pixel(column, row):
 func pixel_to_grid(cur_pos):
 	var new_x = round((cur_pos.x - x_start) / offset);
 	var new_y = round((cur_pos.y - y_start) /-offset);
+	if(new_x<0):
+		new_x = 0
+	if(new_x>self.width):
+		new_x = width-1
+		
+	if(new_y<0):
+		new_y = 0
+	if(new_y>self.height):
+		new_y = height-1
+	
 	return Vector2(new_x,new_y);	
 	
 func is_in_grid(grid_position):
@@ -327,6 +357,18 @@ func find_matches():
 							self.add_to_array(Vector2(i,j-1))
 							self.add_to_array(Vector2(i,j))
 							self.add_to_array(Vector2(i,j+1))
+							
+	
+	if(match_found):		
+		if(!get_tree().get_root().get_node("game_window/AudioStreamPlayer").playing || 
+			get_tree().get_root().get_node("game_window/AudioStreamPlayer").stream == tap_sfx ||
+			get_tree().get_root().get_node("game_window/AudioStreamPlayer").stream == basic_sfx):
+				if(self.streak <=1):
+					get_tree().get_root().get_node("game_window/AudioStreamPlayer").stream = tap_sfx
+				else: 
+					get_tree().get_root().get_node("game_window/AudioStreamPlayer").stream = basic_sfx					
+				get_tree().get_root().get_node("game_window/AudioStreamPlayer").play()	    
+	
 	self.get_bombed_pieces()
 	get_parent().get_node("destroy_timer").start()
 	
@@ -355,6 +397,7 @@ func find_bombs():
 		var cur_color = self.all_pieces[cur_col][cur_row].color
 		var col_matched = 0
 		var row_matched = 0
+		var made_bomb = false		
 		
 		for j in current_matches.size():
 			var this_col = current_matches[j].x
@@ -366,16 +409,22 @@ func find_bombs():
 				row_matched += 1
 		if((col_matched == 5 || row_matched == 5)  && cur_color != "Color"):
 			self.make_bomb(3,cur_color)
+			made_bomb = true
 			continue
 		if(col_matched == 3 && row_matched == 3 && cur_color != "Color"):
 			self.make_bomb(0,cur_color)
+			made_bomb = true
 			continue
 		if(row_matched == 4 && cur_color != "Color"):
 			self.make_bomb(1,cur_color)
+			made_bomb = true
 			continue
 		if(col_matched == 4 && cur_color != "Color"):
 			self.make_bomb(2,cur_color)
+			made_bomb = true
 			continue
+			
+			
 		
 func make_bomb(bomb_type,color):
 	for i in current_matches.size():
@@ -393,11 +442,14 @@ func make_bomb(bomb_type,color):
 			self.change_bomb(bomb_type,piece_one)
 			
 func change_bomb(bomb_type,piece):
+	if(piece == null):		
+		return
 	var piece_wr = weakref(piece)
 	if(!piece_wr.get_ref()):
 		return
-	var pos = self.pixel_to_grid(piece.position)
-	print(self.all_pieces[pos.x][pos.y])
+		
+	get_tree().get_root().get_node("game_window/AudioStreamPlayer").stream = better_sfx			
+	get_tree().get_root().get_node("game_window/AudioStreamPlayer").play()	    
 	if(bomb_type == 0):
 		piece.make_adjacent_bomb()
 	elif(bomb_type == 1):
@@ -489,6 +541,8 @@ func match_color(color):
 						self.find_adjacent_pieces(i,j)
 					self.match_and_dim(all_pieces[i][j])
 					add_to_array(Vector2(i,j))
+	get_tree().get_root().get_node("game_window/AudioStreamPlayer").stream = best_sfx			
+	get_tree().get_root().get_node("game_window/AudioStreamPlayer").play()	
 
 func clear_board():
 	for i in width:
@@ -567,6 +621,9 @@ func match_all_in_column(column):
 				if(self.all_pieces[column][i].is_color_bomb):
 					self.match_color(self.all_pieces[column][i].color)
 				self.all_pieces[column][i].matched = true
+				
+		get_tree().get_root().get_node("game_window/AudioStreamPlayer").stream = best_sfx			
+		get_tree().get_root().get_node("game_window/AudioStreamPlayer").play()	
 			
 	
 func match_all_in_row(row):
@@ -579,6 +636,8 @@ func match_all_in_row(row):
 				if(self.all_pieces[i][row].is_color_bomb):
 					self.match_color(self.all_pieces[i][row].color)
 				self.all_pieces[i][row].matched = true
+		get_tree().get_root().get_node("game_window/AudioStreamPlayer").stream = best_sfx			
+		get_tree().get_root().get_node("game_window/AudioStreamPlayer").play()	
 
 func find_adjacent_pieces(column,row):
 	for i in range(-1,2):
@@ -592,14 +651,16 @@ func find_adjacent_pieces(column,row):
 					if(self.all_pieces[column  + i][row + j].is_color_bomb):
 						self.match_color(self.all_pieces[column  + i][row + j].color)
 					self.all_pieces[column + i][row + j].matched = true
-					
+	get_tree().get_root().get_node("game_window/AudioStreamPlayer").stream = best_sfx			
+	get_tree().get_root().get_node("game_window/AudioStreamPlayer").play()	
+	
 func destroy_sinkers():
 	for i in width:
 		if(self.all_pieces[i][0] != null):
 			if(self.all_pieces[i][0].color == "None"):
 				self.all_pieces[i][0].matched = true
 				self.current_sinkers -= 1
-			
+	
 					
 func generate_slime():
 	# Ensure there are slime pieces

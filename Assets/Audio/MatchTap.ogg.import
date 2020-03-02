@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/MatchTap.ogg-52688eae62576e6eed6d9cae3630aee9.oggstr"
+
+[deps]
+
+source_file="res://Assets/Audio/MatchTap.ogg"
+dest_files=[ "res://.import/MatchTap.ogg-52688eae62576e6eed6d9cae3630aee9.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

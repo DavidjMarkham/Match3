@@ -20,4 +20,4 @@ func _on_Settings_back_button():
 
 
 func _on_Main_play_pressed():
-	get_tree().change_scene("res://Scenes/levels/lvl1.tscn")
+	get_tree().change_scene("res://Scenes/LevelSelect.tscn")

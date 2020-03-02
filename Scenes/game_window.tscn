@@ -1,6 +1,6 @@
-[gd_scene load_steps=18 format=2]
+[gd_scene load_steps=15 format=2]
 
-[ext_resource path="res://Assets/UI/Backgrounds/background 2.png" type="Texture" id=1]
+[ext_resource path="res://Assets/Images/GameBG1.png" type="Texture" id=1]
 [ext_resource path="res://Assets/UI/Bottom UI v 2.png" type="Texture" id=2]
 [ext_resource path="res://Scenes/top_ui.tscn" type="PackedScene" id=3]
 [ext_resource path="res://Scenes/GoalPrefab.tscn" type="PackedScene" id=4]
@@ -12,11 +12,8 @@
 [ext_resource path="res://src/SlimeHolder.gd" type="Script" id=10]
 [ext_resource path="res://Scenes/GameOverPanel.tscn" type="PackedScene" id=11]
 [ext_resource path="res://src/GoalHolder.gd" type="Script" id=12]
-[ext_resource path="res://Scenes/Goal.tscn" type="PackedScene" id=13]
-[ext_resource path="res://Assets/Obstacles/Ice.png" type="Texture" id=14]
-[ext_resource path="res://Assets/Pieces/Pink Piece.png" type="Texture" id=15]
-[ext_resource path="res://Scenes/GameWinScreen.tscn" type="PackedScene" id=16]
-[ext_resource path="res://Assets/Audio/MatchBetter.ogg" type="AudioStream" id=17]
+[ext_resource path="res://Scenes/GameWinScreen.tscn" type="PackedScene" id=13]
+[ext_resource path="res://Assets/Audio/MatchBetter.ogg" type="AudioStream" id=14]
 
 [node name="game_window" type="Node2D"]
 
@@ -25,6 +22,7 @@ texture = ExtResource( 1 )
 centered = false
 
 [node name="Bottom UI v 2" type="Sprite" parent="."]
+visible = false
 position = Vector2( 0, 928 )
 texture = ExtResource( 2 )
 centered = false
@@ -39,17 +37,11 @@ height = 10
 x_start = 64
 y_start = 800
 offset = 64
-empty_spaces = PoolVector2Array( 0, 0, 7, 0, 0, 9, 7, 9, 3, 4, 4, 4, 3, 5, 4, 5 )
-ice_spaces = PoolVector2Array( 3, 0, 4, 0, 3, 9, 4, 9 )
-lock_spaces = PoolVector2Array( 3, 2, 4, 2, 3, 7, 4, 7 )
-concrete_spaces = PoolVector2Array( 3, 1, 4, 1, 3, 8, 4, 8 )
-slime_spaces = PoolVector2Array( 0, 4, 0, 5, 7, 4, 7, 5 )
 sinker_piece = ExtResource( 6 )
-sinkers_in_scene = true
-max_sinkers = 2
 piece_value = 10
 max_score = 5000
-current_counter_value = 60
+current_counter_value = 20
+is_moves = true
 
 [node name="Timer" type="Timer" parent="grid"]
 
@@ -83,20 +75,10 @@ one_shot = true
 [node name="GoalHolder" type="Node" parent="."]
 script = ExtResource( 12 )
 
-[node name="Goal" parent="GoalHolder" instance=ExtResource( 13 )]
-goal_texture = ExtResource( 14 )
-max_needed = 4
-goal_string = "ice"
-
-[node name="Goal2" parent="GoalHolder" instance=ExtResource( 13 )]
-goal_texture = ExtResource( 15 )
-max_needed = 9
-goal_string = "pink"
-
-[node name="GameWinScreen" parent="." instance=ExtResource( 16 )]
+[node name="GameWinScreen" parent="." instance=ExtResource( 13 )]
 
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
-stream = ExtResource( 17 )
+stream = ExtResource( 14 )
 
 [connection signal="check_goal" from="grid" to="Top UI v 2" method="_on_grid_check_goal"]
 [connection signal="check_goal" from="grid" to="GoalHolder" method="_on_grid_check_goal"]
